@@ -24,6 +24,41 @@ const main = async() => {
 
   let account = await program.account.baseAccount.fetch(baseAccount.publicKey);
   console.log('👀 Total Pools', account.totalPools.toString())
+
+  //call add_gif
+  await program.rpc.addGif("insert image linke here", "Test Pool","This is a test Pool", "option 1; option 2", 9897, "Verify here", 5,{
+    accounts: {
+      baseAccount: baseAccount.publicKey,
+    }
+  });
+  await program.rpc.addGif("insert image linke here 3", "Test Pool 2","This is a test Pool 2", "2option 1; 2option 2", 789897, "2Verify here", 2,{
+    accounts: {
+      baseAccount: baseAccount.publicKey,
+    }
+  });
+  await program.rpc.addResult(0,"winner 1",{
+    accounts: {
+      baseAccount: baseAccount.publicKey,
+    }
+  });
+  await program.rpc.placeBet(1,125,"user", "winner 1", {
+    accounts: {
+      baseAccount: baseAccount.publicKey,
+    }
+  })
+
+  account = await program.account.baseAccount.fetch(baseAccount.publicKey);
+  console.log("Total Pools count ", account.totalPools.toString())
+
+  console.log("Pool list: ", account.poolList)
+
+  // await program.rpc.addResult(0,"winner 1",{
+  //   accounts: {
+  //     baseAccount: baseAccount.publicKey,
+  //   }
+  // });
+
+  //console.log("Pool list: ", account.poolList)
 };
 
 const runMain = async () => {
