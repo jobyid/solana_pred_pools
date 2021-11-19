@@ -17,7 +17,10 @@ pub mod myepicproject {
     pub fn add_gif(ctx: Context<AddGif>, image_link: String, pool_name: String, pool_desc: String, win_opt:String, close: u32, verify:String, fee:u8) -> ProgramResult {
         let base_account = &mut ctx.accounts.base_account;
         let wins: Vec<String> = win_opt.split(';').map(|s| s.trim().to_string()).collect(); //chars().filter(|c| !c.is_whitespace()).collect()
+        // make a program address which will hold the SOL for this pool 
+        let pool_wallet = &ctx.accounts.pool_wallet;
         let pool = PoolStruct{
+            pool_wallet: pool_wallet.to_account_info().key.to_string(),
             pool_id: base_account.total_pools,
             image_link: image_link.to_string(),
             user_address: *base_account.to_account_info().key,
@@ -37,8 +40,8 @@ pub mod myepicproject {
         Ok(())
     }
 
-    pub fn add_result(ctx: Context<AddGif>, pool_id:u32, result:String) -> ProgramResult{
-        //TODO; Make this only callable by the pool owner. 
+    pub fn add_result(ctx: Context<AddGif>,result:String, pool_id:u32 ) -> ProgramResult{
+        //TODO: Make this only callable by the pool owner. 
         let base_account = &mut ctx.accounts.base_account;
         let mut i = 0; 
         let mut found = false;
@@ -55,11 +58,12 @@ pub mod myepicproject {
         };
         Ok(())
     }
-    
-    pub fn place_bet(ctx: Context<AddGif>, pool_id:u32, stake_bal:u32, user:String, pred: String) -> ProgramResult {
+
+    pub fn place_bet(ctx: Context<AddGif>, pred: String, pool_id:u32, stake_bal:u32, user:String) -> ProgramResult {
         let base_account = &mut ctx.accounts.base_account;
         // TODO: check prediction is one of possible options 
         // TODO: Add payment to this function 
+        // TODO: make sure today is before the close date. 
         let bet = EntryStruct{
             user: user,
             prediction: pred,
@@ -95,15 +99,22 @@ pub struct StartStuffOff<'info> {
 pub struct AddGif<'info> {
     #[account(mut)]
     pub base_account: Account<'info, BaseAccount>,
+    #[account(init, payer = user, space=9000)]
+    pub pool_wallet: Account<'info, PoolWallet>,
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
 }
-#[derive(Accounts)]
-pub struct PlaceBet<'info>{
-    #[account(mut)]
-    pub base_account: Account<'info, BaseAccount>,
-}
+
+// #[derive(Accounts)]
+// pub struct PlaceBet<'info>{
+//     #[account(mut)]
+//     pub base_account: Account<'info, BaseAccount>,
+// }
+
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct PoolStruct{
+    pub pool_wallet: String,
     pub pool_id: u32,
     pub image_link: String,
     pub user_address: Pubkey,
@@ -114,6 +125,7 @@ pub struct PoolStruct{
     pub close_date_time: u32, 
     pub verify_url: String, 
     pub owner_fee: u8,
+    // TODO: to allow for pools with more then 1 winning result perhaps result should be an array?
     pub result: String,
     pub closed: bool,
     pub entries: Vec<EntryStruct>
@@ -130,4 +142,9 @@ pub struct EntryStruct{
 pub struct BaseAccount {
     pub total_pools: u32,
     pub pool_list: Vec<PoolStruct>,
+}
+
+#[account]
+pub struct PoolWallet{
+    pub balance: u64 
 }

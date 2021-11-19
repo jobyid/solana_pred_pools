@@ -36,12 +36,12 @@ const main = async() => {
       baseAccount: baseAccount.publicKey,
     }
   });
-  await program.rpc.addResult(0,"winner 1",{
+  await program.rpc.addResult("winner 1",0,{
     accounts: {
       baseAccount: baseAccount.publicKey,
     }
   });
-  await program.rpc.placeBet(1,125,"user", "winner 1", {
+  await program.rpc.placeBet("winner 1",1,125,"user",  {
     accounts: {
       baseAccount: baseAccount.publicKey,
     }
