@@ -1,6 +1,6 @@
 const anchor = require('@project-serum/anchor');
 
-const { SystemProgram } = anchor.web3;
+const { SystemProgram, LAMPORTS_PER_SOL } = anchor.web3;
 
 const main = async() => {
   console.log("🚀 Starting test...");
@@ -10,6 +10,7 @@ const main = async() => {
   const program = anchor.workspace.Myepicproject;
 
   const baseAccount = anchor.web3.Keypair.generate();
+  
 
   const tx = await program.rpc.startStuffOff({
     accounts: {
@@ -26,10 +27,16 @@ const main = async() => {
   console.log('👀 Total Pools', account.totalPools.toString())
 
   //call add_gif
+  const poolWallet = anchor.web3.Keypair.generate();
   await program.rpc.addGif("insert image linke here", "Test Pool","This is a test Pool", "option 1; option 2", 9897, "Verify here", 5,{
+    
     accounts: {
       baseAccount: baseAccount.publicKey,
-    }
+      poolWallet: poolWallet.publicKey,
+      user:baseAccount.publicKey,
+      systemProgram: SystemProgram.programId
+    },
+    signers: [baseAccount],
   });
   await program.rpc.addGif("insert image linke here 3", "Test Pool 2","This is a test Pool 2", "2option 1; 2option 2", 789897, "2Verify here", 2,{
     accounts: {

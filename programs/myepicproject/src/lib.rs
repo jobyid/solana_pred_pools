@@ -1,10 +1,13 @@
 use anchor_lang::prelude::*;
+use anchor_lang::AccountsClose;
 
 declare_id!("Cq1TSA1obVQZzw2YYxvFN6Q5ia5TYxSbwyZQ9JwQCbBL");
 
 
 #[program]
 pub mod myepicproject {
+    use anchor_lang::solana_program::{program::invoke, system_instruction::transfer};
+
     use super::*;
     pub fn start_stuff_off(ctx: Context<StartStuffOff>) -> ProgramResult {
         // get a referance to the account 
@@ -19,6 +22,8 @@ pub mod myepicproject {
         let wins: Vec<String> = win_opt.split(';').map(|s| s.trim().to_string()).collect(); //chars().filter(|c| !c.is_whitespace()).collect()
         // make a program address which will hold the SOL for this pool 
         let pool_wallet = &ctx.accounts.pool_wallet;
+        let bump = 5;
+
         let pool = PoolStruct{
             pool_wallet: pool_wallet.to_account_info().key.to_string(),
             pool_id: base_account.total_pools,
@@ -61,6 +66,7 @@ pub mod myepicproject {
 
     pub fn place_bet(ctx: Context<AddGif>, pred: String, pool_id:u32, stake_bal:u32, user:String) -> ProgramResult {
         let base_account = &mut ctx.accounts.base_account;
+        let pool_wallet = &mut ctx.accounts.pool_wallet;
         // TODO: check prediction is one of possible options 
         // TODO: Add payment to this function 
         // TODO: make sure today is before the close date. 
@@ -79,6 +85,24 @@ pub mod myepicproject {
             i += 1;
         };
         if found{
+            let sb = stake_bal as u64;
+            let account_lamports = **pool_wallet.to_account_info().lamports.borrow();
+            let transfer_amount = sb.checked_sub(account_lamports).ok_or(0)?;
+
+            if transfer_amount > 0 {
+                invoke( 
+                    &transfer(
+                        ctx.accounts.user.to_account_info().key,
+                        pool_wallet.to_account_info().key,
+                        transfer_amount,
+                ),
+                &[
+                    ctx.accounts.user.to_account_info(),
+                    pool_wallet.to_account_info(),
+                    ctx.accounts.system_program.to_account_info()
+                ],    
+            )?;
+            }
             base_account.pool_list[i].pool_balance += stake_bal as u64;
             base_account.pool_list[i].entries.push(bet);
         }
@@ -96,20 +120,17 @@ pub struct StartStuffOff<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(pool_name: String, bump: u8)]
 pub struct AddGif<'info> {
-    #[account(mut)]
+    #[account(mut, signer)]
     pub base_account: Account<'info, BaseAccount>,
-    #[account(init, payer = user, space=9000)]
+    #[account(init, seeds=[pool_name.as_bytes(),b"pool_wallet"], space=9000,bump = bump, payer=user)]
     pub pool_wallet: Account<'info, PoolWallet>,
+    // #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>
 }
 
-// #[derive(Accounts)]
-// pub struct PlaceBet<'info>{
-//     #[account(mut)]
-//     pub base_account: Account<'info, BaseAccount>,
-// }
 
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
@@ -130,6 +151,7 @@ pub struct PoolStruct{
     pub closed: bool,
     pub entries: Vec<EntryStruct>
 }
+
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct EntryStruct{
     pub user: String,
